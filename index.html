@@ -1,0 +1,298 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+    <title>
+      Final Project
+    </title>
+  </head>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.25/esri/themes/light/main.css">
+  <script src="https://js.arcgis.com/4.25/"></script>
+  <style>
+  html,
+  body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  #viewDiv {
+    height: 30rem;
+    width: 1fr;
+    border: 1px solid black;
+  }
+
+  #viewDiv2 {
+    padding: 0;
+    height: 30rem;
+    border: 1px solid black;
+  }
+
+  #viewDiv3 {
+    padding: 0;
+    height: 30rem;
+    border: 1px solid black;
+  }
+
+  .container {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .container2 {
+    height: 22rem;
+    width: 50rem;
+    border: 1px solid black;
+    position: absolute;
+    top: 30rem;
+    right: 0rem;
+  }
+
+  .container3 {
+    padding: 1rem;
+    height: 20rem;
+    width: 43rem;
+    border: 1px solid black;
+    position: absolute;
+    top: 30rem;
+    left: 0rem;
+  }
+
+  .container4 {
+    padding: 1rem;
+    height: 20rem;
+    width: 23rem;
+    position: absolute;
+    top: 30rem;
+    left: 45rem;
+  }
+  </style>
+  <script>
+  let selectionIdCount = 0;
+  let highlightIdsCount = 0;
+  let candidate;
+
+  require([
+    "esri/WebMap",
+    "esri/views/MapView",
+    "esri/core/reactiveUtils",
+    "esri/layers/FeatureLayer",
+    "esri/widgets/FeatureTable"
+  ], function (WebMap, MapView, reactiveUtils, FeatureLayer, FeatureTable) {
+
+    // First map
+    const webmap = new WebMap({
+      portalItem: {
+        id: "60ecde2e4cb745a899df491407db0578"
+      }
+    });
+    
+    // Second map
+    const webmap2 = new WebMap({
+      portalItem: {
+          id: "8158f263811a4b219eb95a656ac3ae99"
+      }
+    });
+
+    // Third map
+    const webmap3 = new WebMap({
+      portalItem: {
+          id: "885b78631a1641f590a8d02f5d4ea1b9"
+      }
+    });
+
+    // Set map views
+    const view = new MapView({
+        container: "viewDiv",
+        map: webmap,
+        center: [-97.30, 43.61],
+        zoom: 5,
+    });
+
+    const view2 = new MapView({
+        container: "viewDiv2",
+        map: webmap2,
+        center: [-97.30, 43.61],
+        zoom: 5
+    });
+
+    const view3 = new MapView({
+        container: "viewDiv3",
+        map: webmap3,
+        center: [-97.30, 43.61],
+        zoom: 5
+      });
+
+    // Get the feature layer from the first webmap to display in table
+    view.when(() => {
+      const featureLayer = webmap.layers.getItemAt(0);
+      featureLayer.title = "Table";
+
+      // Create table
+      const featureTable = new FeatureTable({
+        view: view, 
+        layer: featureLayer,
+        visibleElements: {
+          // Table menu items
+          menuItems: {
+            clearSelection: true,
+            refreshData: true,
+            toggleColumns: true,
+            selectedRecordsShowAllToggle: true,
+            selectedRecordsShowSelectedToggle: true,
+            zoomToSelection: true
+          }
+        },
+        tableTemplate: {
+          columnTemplates: [
+            // The elements included in the table
+            {
+              type: "field",
+              fieldName: "Farmer_City",
+              label: "Farmer City",
+              direction: "asc"
+            },
+            {
+              type: "field",
+              fieldName: "Rate",
+              label: "Planting Rate"
+            },
+            {
+              type: "field",
+              fieldName: "Grams_ear",
+              label: "Grams/Ear"
+            },
+            {
+              type: "field",
+              fieldName: "Yield",
+              label: "Yield"
+            }
+          ]
+        },
+        container: document.getElementById("tableDiv")
+      });
+
+      
+      // Listen for the map extent to be changed, filter table based on new extent
+      reactiveUtils.when(
+        () => view.stationary === true,
+        () => {
+          // Get the new extent of view/map whenever map is updated.
+          if (view.extent) {
+            // Filter out and show only the visible features in the feature table.
+            featureTable.filterGeometry = view.extent;
+          }
+        },
+        {
+          initial: true
+        }
+      );
+
+      // Listen for the view's click event and access the associated graphic.
+
+      view.on("immediate-click", (event) => {
+        view.hitTest(event).then((response) => {
+          candidate = response.results.find((result) => {
+            return (
+              result.graphic &&
+              result.graphic.layer &&
+              result.graphic.layer === featureLayer
+            );
+          });
+
+          // Highlight selected elements
+          if (candidate) {
+            const objectId = candidate.graphic.getObjectId();
+            
+            // Check if selected element is already highlighted
+            if (featureTable.highlightIds.includes(objectId)) {
+              featureTable.highlightIds.remove(objectId);
+            } else {
+              // Highlight the feature if not already highlighted
+              featureTable.highlightIds.add(objectId);
+            }
+          }
+        });
+      });
+
+      // Get the number of highlighted items
+      featureTable.watch("highlightIds.length", (ids) => {
+        highlightIdsCount = ids;
+
+        featureTable.viewModel.activeFilters.forEach((filter) => {
+          if (filter.type === "selection") {
+            selectionIdCount = filter.objectIds.length;
+            if (selectionIdCount !== highlightIdsCount) {
+              featureTable.filterBySelection();
+            }
+          }
+        });
+      });
+
+      // Change extent of maps 2 and 3 when the extent of map 1 is changed
+      reactiveUtils.when(
+        () => view.stationary === true,
+        () => {
+          // Get the new extent of view/map whenever map is updated.
+          if (view.extent) {
+            // Change extents
+            view2.extent = view.extent;
+            view3.extent = view.extent;
+          }
+        },
+      );
+    });
+  });
+  </script>
+
+  <body>
+    <div class="container">
+        <div id="viewDiv"></div>
+        <div id="viewDiv2"></div>
+        <div id="viewDiv3"></div>
+    <div class="container2">
+      <div id="tableDiv"></div>
+    </div>
+    <div class="container3">
+      <b>Layout:</b><br>
+      Map 1 (Left) - Yield distribution<br>
+      Map 2 (Middle) - Planting rate distribution<br>
+      Map 3 (Right) - Ear size in grams distribution
+      <br><br>
+      <b>General Instructions:</b><br>
+      Map 1 changes the extent of maps 2 and 3.<br>
+      The feature table filters according to the extent of map 1.<br>
+      Click on the arrows to view a popup with more information.
+      <br><br>
+      <b>Calculator Instructions:</b><br>
+      Enter longitude to get a planting rate recommendation based on the averages of this dataset<br>
+      The formula used to calculate the recommendation is:<br>
+      y = -110.89x^2 – 18,798.93x – 750,138.23 
+    </div>
+    <div class="container4">
+      <label for="Calculator">Enter your longitude:</label><br>
+      <input type="text" id="text1" placeholder="Longitude">
+      <input type="button" id="btn1" value="Submit">
+      <p class="output" id="output1"> </p>
+    </div>
+
+    <script>
+      const txt1 = document.getElementById("text1");
+      const btn1 = document.getElementById("btn1");
+      const out1 = document.getElementById("output1");
+  
+      // Calculate the recommended planting rate and display
+      function calcPlantingRate() {
+        var recomend;
+        var userInput = txt1.value;
+        
+        recomend = Math.round(((-110.89 * userInput * userInput) - (18798.93 * userInput) - 750138.23)); 
+        out1.innerHTML = "Your recommended planting rate is: " + recomend;
+      }
+  
+      btn1.addEventListener("click", calcPlantingRate);
+    </script>
+  </body>
+</html>
