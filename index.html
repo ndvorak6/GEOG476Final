@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -115,8 +116,12 @@
     "esri/views/MapView",
     "esri/core/reactiveUtils",
     "esri/layers/FeatureLayer",
-    "esri/widgets/FeatureTable"
-  ], function (WebMap, MapView, reactiveUtils, FeatureLayer, FeatureTable) {
+    "esri/widgets/FeatureTable",
+    "esri/widgets/ScaleBar",
+    "esri/widgets/Home",
+    "esri/widgets/Search",
+    "esri/widgets/Fullscreen"
+  ], function (WebMap, MapView, reactiveUtils, FeatureLayer, FeatureTable, ScaleBar, Home, Search, Fullscreen) {
 
     // First map
     const webmap = new WebMap({
@@ -160,6 +165,42 @@
         center: [-97.30, 43.61],
         zoom: 5
       });
+
+      // Adds scalebar to first map, placed in bottom left
+      let scaleBar = new ScaleBar({
+        view: view
+      });
+      view.ui.add(scaleBar, {
+        position: "bottom-left"
+      });
+
+      // Adds home widget to first map, placed in top left
+      let homeWidget = new Home({
+        view: view
+      });
+      view.ui.add(homeWidget, "top-left");
+
+      // Adds search widget to first map, placed in top right
+      const searchWidget = new Search({
+        view: view
+      });
+      view.ui.add(searchWidget, {
+        position: "top-right",
+      });
+
+      // Adds fullscreen widgets to all three maps, placed in bottom right
+      fullscreen = new Fullscreen({
+        view: view
+      });
+      view.ui.add(fullscreen, "bottom-right");
+      fullscreen = new Fullscreen({
+        view: view2
+      });
+      view2.ui.add(fullscreen, "bottom-right");
+      fullscreen = new Fullscreen({
+        view: view3
+      });
+      view3.ui.add(fullscreen, "bottom-right");
 
     // Get the feature layer from the first webmap to display in table
     view.when(() => {
@@ -230,56 +271,6 @@
 
       view.on("immediate-click", (event) => {
         view.hitTest(event).then((response) => {
-          candidate = response.results.find((result) => {
-            return (
-              result.graphic &&
-              result.graphic.layer &&
-              result.graphic.layer === featureLayer
-            );
-          });
-
-          // Highlight selected elements
-          if (candidate) {
-            const objectId = candidate.graphic.getObjectId();
-            
-            // Check if selected element is already highlighted
-            if (featureTable.highlightIds.includes(objectId)) {
-              featureTable.highlightIds.remove(objectId);
-            } else {
-              // Highlight the feature if not already highlighted
-              featureTable.highlightIds.add(objectId);
-            }
-          }
-        });
-      });
-
-      view2.on("immediate-click", (event) => {
-        view2.hitTest(event).then((response) => {
-          candidate = response.results.find((result) => {
-            return (
-              result.graphic &&
-              result.graphic.layer &&
-              result.graphic.layer === featureLayer
-            );
-          });
-
-          // Highlight selected elements
-          if (candidate) {
-            const objectId = candidate.graphic.getObjectId();
-            
-            // Check if selected element is already highlighted
-            if (featureTable.highlightIds.includes(objectId)) {
-              featureTable.highlightIds.remove(objectId);
-            } else {
-              // Highlight the feature if not already highlighted
-              featureTable.highlightIds.add(objectId);
-            }
-          }
-        });
-      });
-
-      view3.on("immediate-click", (event) => {
-        view3.hitTest(event).then((response) => {
           candidate = response.results.find((result) => {
             return (
               result.graphic &&
