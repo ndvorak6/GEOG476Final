@@ -253,6 +253,56 @@
         });
       });
 
+      view2.on("immediate-click", (event) => {
+        view2.hitTest(event).then((response) => {
+          candidate = response.results.find((result) => {
+            return (
+              result.graphic &&
+              result.graphic.layer &&
+              result.graphic.layer === featureLayer
+            );
+          });
+
+          // Highlight selected elements
+          if (candidate) {
+            const objectId = candidate.graphic.getObjectId();
+            
+            // Check if selected element is already highlighted
+            if (featureTable.highlightIds.includes(objectId)) {
+              featureTable.highlightIds.remove(objectId);
+            } else {
+              // Highlight the feature if not already highlighted
+              featureTable.highlightIds.add(objectId);
+            }
+          }
+        });
+      });
+
+      view3.on("immediate-click", (event) => {
+        view3.hitTest(event).then((response) => {
+          candidate = response.results.find((result) => {
+            return (
+              result.graphic &&
+              result.graphic.layer &&
+              result.graphic.layer === featureLayer
+            );
+          });
+
+          // Highlight selected elements
+          if (candidate) {
+            const objectId = candidate.graphic.getObjectId();
+            
+            // Check if selected element is already highlighted
+            if (featureTable.highlightIds.includes(objectId)) {
+              featureTable.highlightIds.remove(objectId);
+            } else {
+              // Highlight the feature if not already highlighted
+              featureTable.highlightIds.add(objectId);
+            }
+          }
+        });
+      });
+
       // Get the number of highlighted items
       featureTable.watch("highlightIds.length", (ids) => {
         highlightIdsCount = ids;
@@ -266,19 +316,13 @@
           }
         });
       });
-
-      // Change extent of maps 2 and 3 when the extent of map 1 is changed
-      reactiveUtils.when(
-        () => view.stationary === true,
-        () => {
-          // Get the new extent of view/map whenever map is updated.
-          if (view.extent) {
-            // Change extents
-            view2.extent = view.extent;
-            view3.extent = view.extent;
-          }
-        },
-      );
+      
+      reactiveUtils.watch(
+      () => view.extent,
+      (extent) => {
+        view2.extent = view.extent;
+        view3.extent = view2.extent;
+      });
     });
   });
   </script>
